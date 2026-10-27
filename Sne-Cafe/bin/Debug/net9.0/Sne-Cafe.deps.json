@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "Sne-Cafe/1.0.0": {
+        "runtime": {
+          "Sne-Cafe.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Sne-Cafe/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

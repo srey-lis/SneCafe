@@ -1,0 +1,108 @@
+﻿@using SneCafe.Models
+@model ReceiptViewModel
+@{
+    ViewData["Title"] = "Receipt " + Model.OrderNo;
+}
+
+<!-- Buttons (hidden when printing) -->
+<div class="d-flex flex-wrap justify-content-center gap-2 mb-4 no-print">
+    <button type="button" class="btn btn-sne px-4" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i> Print
+    </button>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-light px-4">
+        <i class="bi bi-list-check me-1"></i> Orders
+    </a>
+    <a asp-controller="Order" asp-action="Create" class="btn btn-light px-4">
+        <i class="bi bi-plus-lg me-1"></i> New Order
+    </a>
+</div>
+
+<div class="receipt">
+
+    <!-- Shop header -->
+    <div class="text-center">
+        <div style="font-size: 2rem; color: var(--sne-green)"><i class="bi bi-cup-hot-fill"></i></div>
+        <h2 class="h4 fw-bold mb-0">SNE CAFE</h2>
+        <div class="text-muted small">Thank you for your order</div>
+    </div>
+
+    <hr />
+
+    <!-- Order info -->
+    <div class="small">
+        <div class="d-flex justify-content-between">
+            <span class="text-muted">Order</span>
+            <span class="fw-semibold">@Model.OrderNo</span>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span class="text-muted">Date</span>
+            <span>@Model.CreatedAt.ToString("dd MMM yyyy, HH:mm")</span>
+        </div>
+        @if (!string.IsNullOrEmpty(Model.StaffName))
+        {
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Cashier</span>
+                <span>@Model.StaffName</span>
+            </div>
+        }
+        <div class="d-flex justify-content-between">
+            <span class="text-muted">Payment</span>
+            <span>@Model.PaymentMethod</span>
+        </div>
+    </div>
+
+    @if (Model.Status == "Cancelled")
+    {
+        <div class="text-center fw-bold text-danger border border-danger rounded py-1 mt-3">
+            CANCELLED
+        </div>
+    }
+
+    <hr />
+
+    <!-- Items -->
+    @foreach (var i in Model.Items)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(i.Size)) parts.Add(i.Size);
+        if (!string.IsNullOrEmpty(i.SugarLevel)) parts.Add(i.SugarLevel + " sugar");
+        if (!string.IsNullOrEmpty(i.Toppings)) parts.Add(i.Toppings);
+
+        <div class="d-flex justify-content-between mb-2">
+            <div class="pe-2">
+                <div class="small fw-semibold">@i.ProductName x @i.Qty</div>
+                @if (parts.Count > 0)
+                {
+                    <div class="text-muted" style="font-size: 0.75rem">@string.Join(" · ", parts)</div>
+                }
+                <div class="text-muted" style="font-size: 0.75rem">$@i.UnitPrice.ToString("0.00") each</div>
+            </div>
+            <div class="small fw-semibold">$@i.LineTotal.ToString("0.00")</div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.Note))
+    {
+        <div class="small fst-italic mt-2"><i class="bi bi-sticky"></i> @Model.Note</div>
+    }
+
+    <hr />
+
+    <!-- Totals -->
+    <div class="small">
+        <div class="d-flex justify-content-between">
+            <span>Subtotal</span><span>$@Model.Subtotal.ToString("0.00")</span>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span>Tax (@Math.Round(MenuOptions.TaxRate * 100)%)</span><span>$@Model.Tax.ToString("0.00")</span>
+        </div>
+    </div>
+    <div class="d-flex justify-content-between align-items-center mt-2">
+        <span class="fw-semibold">Total</span>
+        <span class="fs-4 fw-bold">$@Model.Total.ToString("0.00")</span>
+    </div>
+
+    <hr />
+
+    <div class="text-center text-muted small">See you again!</div>
+</div>

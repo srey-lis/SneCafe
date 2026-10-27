@@ -1,0 +1,54 @@
+﻿@using SneCafe.Models
+@model NewStaffViewModel
+@{
+    ViewData["Title"] = "Setup";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+
+                <div class="text-center mb-4">
+                    <div class="stat-icon mx-auto mb-2" style="width: 56px; height: 56px; font-size: 1.6rem">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <h1 class="h4 fw-bold mb-1">Create the first account</h1>
+                    <div class="text-muted small">
+                        This is the admin account. This page only works once, when no accounts exist.
+                    </div>
+                </div>
+
+                <form asp-action="Setup" method="post">
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label small fw-semibold"></label>
+                        <input asp-for="FullName" class="form-control" autofocus />
+                        <span asp-validation-for="FullName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Username" class="form-label small fw-semibold"></label>
+                        <input asp-for="Username" class="form-control" autocomplete="username" />
+                        <span asp-validation-for="Username" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label small fw-semibold"></label>
+                        <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="ConfirmPassword" class="form-label small fw-semibold"></label>
+                        <input asp-for="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" />
+                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-sne w-100">
+                        <i class="bi bi-check-lg me-1"></i> Create admin account
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

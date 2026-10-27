@@ -1,0 +1,130 @@
+﻿@using System.Security.Claims
+@using SneCafe.Models
+@model StaffPageViewModel
+@{
+    ViewData["Title"] = "Staff";
+    var me = User.FindFirstValue(ClaimTypes.NameIdentifier);
+}
+
+<div class="mb-4">
+    <h1 class="h3 fw-bold mb-1">Staff</h1>
+    <p class="text-muted mb-0">Create and manage staff accounts.</p>
+</div>
+
+@if (TempData["Info"] != null)
+{
+    <div class="alert alert-success">@TempData["Info"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="row g-4">
+
+    <!-- Staff list -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr class="text-uppercase small text-muted">
+                            <th class="ps-4">Name</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th class="text-end pe-4"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in Model.Users)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="avatar"><i class="bi bi-person"></i></div>
+                                        <div>
+                                            <div class="fw-semibold">@u.FullName</div>
+                                            <div class="text-muted small">@u.Username</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge rounded-pill @(u.Role == "Admin" ? "text-bg-dark" : "text-bg-light border")">@u.Role</span>
+                                </td>
+                                <td>
+                                    @if (u.IsActive)
+                                    {
+                                        <span class="badge rounded-pill text-bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge rounded-pill text-bg-secondary">Disabled</span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    @if (u.Id.ToString() != me)
+                                    {
+                                        <form asp-action="ToggleActive" method="post" class="d-inline">
+                                            <input type="hidden" name="id" value="@u.Id" />
+                                            <button type="submit" class="btn btn-sm btn-light">
+                                                @(u.IsActive ? "Disable" : "Enable")
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add staff -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="fw-semibold mb-3"><i class="bi bi-person-plus me-1"></i> Add staff</h5>
+
+                <form asp-action="AddStaff" method="post">
+                    <div class="mb-3">
+                        <label asp-for="Form.FullName" class="form-label small fw-semibold"></label>
+                        <input asp-for="Form.FullName" class="form-control" />
+                        <span asp-validation-for="Form.FullName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.Username" class="form-label small fw-semibold"></label>
+                        <input asp-for="Form.Username" class="form-control" />
+                        <span asp-validation-for="Form.Username" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.Password" class="form-label small fw-semibold"></label>
+                        <input asp-for="Form.Password" type="password" class="form-control" autocomplete="new-password" />
+                        <span asp-validation-for="Form.Password" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Form.ConfirmPassword" class="form-label small fw-semibold"></label>
+                        <input asp-for="Form.ConfirmPassword" type="password" class="form-control" autocomplete="new-password" />
+                        <span asp-validation-for="Form.ConfirmPassword" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Form.Role" class="form-label small fw-semibold"></label>
+                        <select asp-for="Form.Role" class="form-select">
+                            <option value="Staff">Staff</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                        <span asp-validation-for="Form.Role" class="text-danger small"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-sne w-100">
+                        <i class="bi bi-plus-lg me-1"></i> Create account
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

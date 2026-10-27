@@ -1,0 +1,402 @@
+﻿@using SneCafe.Models
+@model List<Product>
+@{
+    ViewData["Title"] = "New Order";
+}
+
+<!-- Header -->
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+    <div>
+        <h1 class="h3 fw-bold mb-1">New Order</h1>
+        <p class="text-muted mb-0">Pick items and take payment.</p>
+    </div>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-light px-4">
+        <i class="bi bi-list-check me-1"></i> All Orders
+    </a>
+</div>
+
+<!-- Success / error message -->
+<div id="msgBox" class="alert d-none" role="alert"></div>
+
+<div class="row g-4">
+
+    <!-- LEFT: Current Sale -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="fw-semibold mb-2">Current Sale</h5>
+
+                <div id="cartItems"></div>
+
+                <input id="orderNote" type="text" class="form-control form-control-sm mt-3"
+                       placeholder="Add note (e.g. take away)" maxlength="200" />
+
+                <hr />
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>Subtotal</span><span id="subtotal">$0.00</span>
+                </div>
+                <div class="d-flex justify-content-between small mb-2">
+                    <span>Tax (<span id="taxPct"></span>%)</span><span id="tax">$0.00</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">Total</span>
+                    <span class="fs-3 fw-semibold" id="total">$0.00</span>
+                </div>
+
+                <!-- Payment method -->
+                <div class="d-flex align-items-center gap-2 mt-3">
+                    <span class="small text-muted">Payment</span>
+                    <input type="radio" class="btn-check" name="pay" id="payCash" value="Cash" checked>
+                    <label class="btn btn-opt" for="payCash"><i class="bi bi-cash-coin me-1"></i>Cash</label>
+                    <input type="radio" class="btn-check" name="pay" id="payCard" value="Card">
+                    <label class="btn btn-opt" for="payCard"><i class="bi bi-credit-card me-1"></i>Card</label>
+                </div>
+
+                <div class="d-flex gap-2 mt-3">
+                    <button id="btnClear" class="btn btn-clear">Clear Cart</button>
+                    <button id="btnPay" class="btn btn-sne flex-grow-1">Pay $0.00</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: Products -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div id="categoryPills" class="d-flex flex-wrap gap-2 mb-3">
+                    <button class="pill active" data-cat="All">All</button>
+                    <button class="pill" data-cat="Coffee">Coffee</button>
+                    <button class="pill" data-cat="Food">Food</button>
+                    <button class="pill" data-cat="Drinks">Drinks</button>
+                    <button class="pill" data-cat="Desserts">Desserts</button>
+                </div>
+
+                <div id="productGrid" class="row g-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Options pop-up (size, sugar, toppings) -->
+<div class="modal fade" id="optionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="border-radius: 20px">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold" id="modalTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body" id="modalBody">
+                <div class="fw-semibold small mb-2"><i class="bi bi-cup-straw me-1"></i> Size</div>
+                <div id="sizeOptions" class="d-flex flex-wrap gap-2 mb-3"></div>
+
+                <div class="fw-semibold small mb-2"><i class="bi bi-droplet-half me-1"></i> Sugar level</div>
+                <div id="sugarOptions" class="d-flex flex-wrap gap-2 mb-3"></div>
+
+                <div class="fw-semibold small mb-2"><i class="bi bi-plus-circle me-1"></i> Toppings</div>
+                <div id="toppingOptions" class="d-flex flex-wrap gap-2 mb-3"></div>
+
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="fw-semibold small">Quantity</span>
+                    <div class="qty-box">
+                        <button type="button" id="modalMinus"><i class="bi bi-dash"></i></button>
+                        <span id="modalQty">1</span>
+                        <button type="button" id="modalPlus"><i class="bi bi-plus"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" id="btnConfirm" class="btn btn-sne w-100"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ---------- Data from the server ----------
+        const products    = @Html.Raw(Json.Serialize(Model));
+        const sizes       = @Html.Raw(Json.Serialize(MenuOptions.Sizes));
+        const sugarLevels = @Html.Raw(Json.Serialize(MenuOptions.SugarLevels));
+        const toppingList = @Html.Raw(Json.Serialize(MenuOptions.Toppings));
+        const TAX_RATE    = @Html.Raw(Json.Serialize(MenuOptions.TaxRate));
+
+        const saveUrl   = "@Url.Action("Save", "Order")";
+        const ordersUrl = "@Url.Action("Index", "Home")";
+
+        let cart = [];      // lines: { lineId, sig, id, name, icon, imageUrl, unitPrice, qty, size, sugar, toppings }
+        let nextLineId = 1;
+        let currentCategory = "All";
+        let modalProduct = null;
+        let modalQty = 1;
+
+        const money = n => "$" + n.toFixed(2);
+        const round2 = n => Math.round(n * 100) / 100;
+        const optionModal = new bootstrap.Modal(document.getElementById("optionModal"));
+
+        document.getElementById("taxPct").textContent = Math.round(TAX_RATE * 100);
+
+        // Icon underneath, picture on top (if the picture fails, the icon shows)
+        function pic(p) {
+            const icon = `<i class="bi ${p.icon}"></i>`;
+            const img = p.imageUrl
+                ? `<img src="${p.imageUrl}" alt="${p.name}" onerror="this.remove()">`
+                : "";
+            return icon + img;
+        }
+
+        function showMessage(text, ok, withLink) {
+            const box = document.getElementById("msgBox");
+            box.className = "alert " + (ok ? "alert-success" : "alert-danger");
+            box.textContent = text;
+            if (withLink) {
+                box.innerHTML += ` <a href="${ordersUrl}" class="alert-link">View orders</a>`;
+            }
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        // ---------- Products ----------
+        function renderProducts() {
+            const list = currentCategory === "All"
+                ? products
+                : products.filter(p => p.category === currentCategory);
+
+            document.getElementById("productGrid").innerHTML = list.map(p => `
+                <div class="col-6 col-md-4 col-xl-3">
+                    <div class="product-card">
+                        <div class="product-img">${pic(p)}</div>
+                        <div class="mt-2 small">${p.name}</div>
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <span class="fw-semibold small">${money(p.price)}</span>
+                            <button class="btn-add" data-add="${p.id}"><i class="bi bi-plus-lg"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        // ---------- Pop-up ----------
+        function openOptions(product) {
+            modalProduct = product;
+            modalQty = 1;
+            document.getElementById("modalTitle").textContent = product.name;
+
+            document.getElementById("sizeOptions").innerHTML = sizes.map((s, i) => `
+                <input type="radio" class="btn-check" name="size" id="size${i}" value="${i}" ${i === 0 ? "checked" : ""}>
+                <label class="btn btn-opt" for="size${i}">${s.name}${s.extra > 0 ? " +" + money(s.extra) : ""}</label>
+            `).join("");
+
+            document.getElementById("sugarOptions").innerHTML = sugarLevels.map((s, i) => `
+                <input type="radio" class="btn-check" name="sugar" id="sugar${i}" value="${i}" ${i === sugarLevels.length - 1 ? "checked" : ""}>
+                <label class="btn btn-opt" for="sugar${i}">${s}</label>
+            `).join("");
+
+            document.getElementById("toppingOptions").innerHTML = toppingList.map((t, i) => `
+                <input type="checkbox" class="btn-check" name="topping" id="top${i}" value="${i}">
+                <label class="btn btn-opt" for="top${i}">${t.name} +${money(t.price)}</label>
+            `).join("");
+
+            updateModal();
+            optionModal.show();
+        }
+
+        // Read what staff selected in the pop-up
+        function getSelection() {
+            const size = sizes[parseInt(document.querySelector('input[name="size"]:checked').value)];
+            const sugar = sugarLevels[parseInt(document.querySelector('input[name="sugar"]:checked').value)];
+            const tops = [...document.querySelectorAll('input[name="topping"]:checked')]
+                .map(c => toppingList[parseInt(c.value)]);
+            const unitPrice = round2(modalProduct.price + size.extra + tops.reduce((s, t) => s + t.price, 0));
+            return { size, sugar, tops, unitPrice };
+        }
+
+        function updateModal() {
+            const sel = getSelection();
+            document.getElementById("modalQty").textContent = modalQty;
+            document.getElementById("btnConfirm").textContent =
+                "Add to Cart  ·  " + money(sel.unitPrice * modalQty);
+        }
+
+        // ---------- Cart ----------
+        function optionsText(i) {
+            const parts = [];
+            if (i.size) parts.push(i.size);
+            if (i.sugar) parts.push(i.sugar + " sugar");
+            if (i.toppings.length) parts.push(i.toppings.join(", "));
+            return parts.join(" · ");
+        }
+
+        function renderCart() {
+            const box = document.getElementById("cartItems");
+
+            if (cart.length === 0) {
+                box.innerHTML = `<div class="text-center text-muted py-5">
+                                    <div class="display-6"><i class="bi bi-cart"></i></div>
+                                    <div class="small mt-2">No items yet. Tap + on a product.</div>
+                                 </div>`;
+            } else {
+                box.innerHTML = cart.map(i => `
+                    <div class="cart-item">
+                        <div class="cart-thumb">${pic(i)}</div>
+                        <div class="flex-grow-1">
+                            <div class="small fw-semibold">${i.name}</div>
+                            <div class="text-muted" style="font-size: 0.75rem">${optionsText(i)}</div>
+                        </div>
+                        <div class="qty-box">
+                            <button data-minus="${i.lineId}"><i class="bi bi-dash"></i></button>
+                            <span>${i.qty}</span>
+                            <button data-plus="${i.lineId}"><i class="bi bi-plus"></i></button>
+                        </div>
+                        <div class="fw-semibold small" style="width: 56px; text-align: right">${money(i.unitPrice * i.qty)}</div>
+                        <button class="btn btn-sm text-muted" data-remove="${i.lineId}"><i class="bi bi-trash"></i></button>
+                    </div>
+                `).join("");
+            }
+
+            const subtotal = round2(cart.reduce((sum, i) => sum + i.unitPrice * i.qty, 0));
+            const tax = round2(subtotal * TAX_RATE);
+            const total = round2(subtotal + tax);
+
+            document.getElementById("subtotal").textContent = money(subtotal);
+            document.getElementById("tax").textContent = money(tax);
+            document.getElementById("total").textContent = money(total);
+            document.getElementById("btnPay").textContent = "Pay " + money(total);
+        }
+
+        // Same product + same options = same line (quantity goes up)
+        function addLine(product, size, sugar, tops, unitPrice, qty) {
+            const sig = [product.id, size, sugar, tops.map(t => t.name).sort().join(",")].join("|");
+            const existing = cart.find(i => i.sig === sig);
+
+            if (existing) {
+                existing.qty += qty;
+            } else {
+                cart.push({
+                    lineId: nextLineId++, sig: sig,
+                    id: product.id, name: product.name, icon: product.icon, imageUrl: product.imageUrl,
+                    unitPrice: unitPrice, qty: qty,
+                    size: size, sugar: sugar, toppings: tops.map(t => t.name)
+                });
+            }
+            renderCart();
+        }
+
+        function changeQty(lineId, change) {
+            const item = cart.find(i => i.lineId === lineId);
+            item.qty += change;
+            if (item.qty < 1) {
+                cart = cart.filter(i => i.lineId !== lineId);
+            }
+            renderCart();
+        }
+
+        // ---------- Clicks ----------
+        document.getElementById("productGrid").addEventListener("click", e => {
+            const btn = e.target.closest("[data-add]");
+            if (!btn) return;
+
+            const p = products.find(p => p.id === parseInt(btn.dataset.add));
+            if (p.hasOptions) {
+                openOptions(p);
+            } else {
+                addLine(p, "", "", [], p.price, 1);
+            }
+        });
+
+        document.getElementById("modalBody").addEventListener("change", updateModal);
+
+        document.getElementById("modalPlus").addEventListener("click", () => {
+            modalQty++;
+            updateModal();
+        });
+        document.getElementById("modalMinus").addEventListener("click", () => {
+            if (modalQty > 1) modalQty--;
+            updateModal();
+        });
+
+        document.getElementById("btnConfirm").addEventListener("click", () => {
+            const sel = getSelection();
+            addLine(modalProduct, sel.size.name, sel.sugar, sel.tops, sel.unitPrice, modalQty);
+            optionModal.hide();
+        });
+
+        document.getElementById("cartItems").addEventListener("click", e => {
+            const plus = e.target.closest("[data-plus]");
+            const minus = e.target.closest("[data-minus]");
+            const remove = e.target.closest("[data-remove]");
+
+            if (plus) changeQty(parseInt(plus.dataset.plus), 1);
+            if (minus) changeQty(parseInt(minus.dataset.minus), -1);
+            if (remove) {
+                cart = cart.filter(i => i.lineId !== parseInt(remove.dataset.remove));
+                renderCart();
+            }
+        });
+
+        document.getElementById("categoryPills").addEventListener("click", e => {
+            const pill = e.target.closest(".pill");
+            if (!pill) return;
+            document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+            pill.classList.add("active");
+            currentCategory = pill.dataset.cat;
+            renderProducts();
+        });
+
+        document.getElementById("btnClear").addEventListener("click", () => {
+            cart = [];
+            renderCart();
+        });
+
+        // ---------- PAY: send the cart to the server ----------
+        document.getElementById("btnPay").addEventListener("click", async () => {
+            if (cart.length === 0) {
+                showMessage("The cart is empty.", false);
+                return;
+            }
+
+            const payBtn = document.getElementById("btnPay");
+            payBtn.disabled = true;
+
+            // Only ids, quantities and options. The server works out the prices.
+            const order = {
+                note: document.getElementById("orderNote").value,
+                paymentMethod: document.querySelector('input[name="pay"]:checked').value,
+                items: cart.map(i => ({
+                    productId: i.id,
+                    qty: i.qty,
+                    size: i.size || null,
+                    sugar: i.sugar || null,
+                    toppings: i.toppings
+                }))
+            };
+
+            try {
+                const res = await fetch(saveUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(order)
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    showMessage("Order " + data.orderNo + " saved.", true, true);
+                    cart = [];
+                    document.getElementById("orderNote").value = "";
+                    renderCart();
+                } else {
+                    showMessage(data.message || "Could not save the order.", false);
+                }
+            } catch (err) {
+                showMessage("Network error. Please try again.", false);
+            } finally {
+                payBtn.disabled = false;
+            }
+        });
+
+        // First draw
+        renderProducts();
+        renderCart();
+    </script>
+}
