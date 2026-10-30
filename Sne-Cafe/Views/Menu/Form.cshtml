@@ -1,0 +1,165 @@
+﻿@using Microsoft.AspNetCore.Mvc.Rendering
+@using SneCafe.Models
+@model ProductFormViewModel
+@{
+    ViewData["Title"] = Model.IsEdit ? "Edit item" : "Add item";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+
+        <div class="mb-4">
+            <h1 class="h3 fw-bold mb-1">@(Model.IsEdit ? "Edit item" : "Add item")</h1>
+            <p class="text-muted mb-0">Fill in the details. The picture is optional.</p>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+
+                <form asp-action="@(Model.IsEdit ? "Edit" : "Create")" method="post" enctype="multipart/form-data">
+                    <input type="hidden" asp-for="Form.Id" />
+
+                    <div class="row g-3">
+
+                        <div class="col-md-8">
+                            <label asp-for="Form.Name" class="form-label small fw-semibold">Item name</label>
+                            <input asp-for="Form.Name" class="form-control" autofocus />
+                            <span asp-validation-for="Form.Name" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="Form.Price" class="form-label small fw-semibold">Price ($)</label>
+                            <input asp-for="Form.Price" type="number" step="0.01" min="0.01" class="form-control" />
+                            <span asp-validation-for="Form.Price" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Form.CategoryId" class="form-label small fw-semibold"></label>
+                            <select asp-for="Form.CategoryId" class="form-select"
+                                    asp-items="@(new SelectList(Model.Categories, "Id", "Name"))">
+                                <option value="0">Choose a category...</option>
+                            </select>
+                            <span asp-validation-for="Form.CategoryId" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Form.Icon" class="form-label small fw-semibold">Icon (shown when there is no picture)</label>
+                            <select asp-for="Form.Icon" class="form-select"
+                                    asp-items="@(new SelectList(MenuIcons.All, "Value", "Label"))"></select>
+                            <span asp-validation-for="Form.Icon" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Picture -->
+                        <div class="col-md-8">
+                            <div class="fw-semibold small mb-2"><i class="bi bi-image me-1"></i> Picture</div>
+
+                            <label for="Form_ImageFile" class="form-label small text-muted mb-1">Upload a file from your computer</label>
+                            <input asp-for="Form.ImageFile" type="file" class="form-control"
+                                   accept="image/png,image/jpeg,image/webp,image/gif" />
+                            <div class="form-text">JPG, PNG, WEBP or GIF, up to 2 MB. A picture about 800 px wide is perfect.</div>
+                            <span asp-validation-for="Form.ImageFile" class="text-danger small"></span>
+
+                            <div class="text-center text-muted small my-2">or</div>
+
+                            <label for="Form_ImageUrl" class="form-label small text-muted mb-1">Paste a picture link</label>
+                            <input asp-for="Form.ImageUrl" class="form-control" placeholder="https://..." />
+                            <span asp-validation-for="Form.ImageUrl" class="text-danger small"></span>
+
+                            @if (Model.IsEdit && !string.IsNullOrEmpty(Model.Form.ImageUrl))
+                            {
+                                <div class="form-check mt-2">
+                                    <input asp-for="Form.RemoveImage" class="form-check-input" />
+                                    <label asp-for="Form.RemoveImage" class="form-check-label small"></label>
+                                </div>
+                            }
+
+                            <div class="form-text">If you do both, the uploaded file is used.</div>
+                        </div>
+
+                        <!-- Live preview -->
+                        <div class="col-md-4">
+                            <div class="form-label small fw-semibold">Preview</div>
+                            <div id="imgPreview" class="product-img" style="height: 110px">
+                                <i class="bi @Model.Form.Icon"></i>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check form-switch mb-1">
+                                <input asp-for="Form.HasOptions" class="form-check-input" />
+                                <label asp-for="Form.HasOptions" class="form-check-label"></label>
+                            </div>
+                            <div class="form-text mb-3">Turn this on for drinks. Food and desserts usually do not need it.</div>
+
+                            <div class="form-check form-switch">
+                                <input asp-for="Form.IsAvailable" class="form-check-input" />
+                                <label asp-for="Form.IsAvailable" class="form-check-label"></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <a asp-action="Index" class="btn btn-clear">Cancel</a>
+                        <button type="submit" class="btn btn-sne flex-grow-1">
+                            <i class="bi bi-check-lg me-1"></i> @(Model.IsEdit ? "Save changes" : "Add to menu")
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const fileInput = document.getElementById("Form_ImageFile");
+        const urlInput = document.getElementById("Form_ImageUrl");
+        const iconSelect = document.getElementById("Form_Icon");
+        const removeBox = document.getElementById("Form_RemoveImage");   // only exists when editing
+        const preview = document.getElementById("imgPreview");
+        let objectUrl = null;
+
+        function updatePreview() {
+            // icon
+            preview.querySelector("i").className = "bi " + iconSelect.value;
+
+            // remove the old picture from the preview
+            preview.querySelector("img")?.remove();
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+                objectUrl = null;
+            }
+
+            // which picture would be saved? file > (nothing, if "remove" ticked) > link
+            let src = "";
+            if (fileInput.files.length > 0) {
+                objectUrl = URL.createObjectURL(fileInput.files[0]);
+                src = objectUrl;
+            } else if (!(removeBox && removeBox.checked)) {
+                src = urlInput.value.trim();
+            }
+
+            if (src) {
+                const img = document.createElement("img");
+                img.alt = "";
+                img.onerror = () => img.remove();
+                img.src = src;
+                preview.appendChild(img);
+            }
+        }
+
+        fileInput.addEventListener("change", () => {
+            const f = fileInput.files[0];
+            if (f && f.size > 2 * 1024 * 1024) {
+                alert("The picture is too big. Maximum size is 2 MB.");
+                fileInput.value = "";
+            }
+            updatePreview();
+        });
+
+        urlInput.addEventListener("input", updatePreview);
+        iconSelect.addEventListener("change", updatePreview);
+        removeBox?.addEventListener("change", updatePreview);
+        updatePreview();
+    </script>
+}

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SneCafe")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d651a0791f52c79ac854f8ed613370d7e91f77dd")]
 [assembly: System.Reflection.AssemblyProductAttribute("SneCafe")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SneCafe")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

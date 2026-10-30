@@ -2,6 +2,8 @@
     var path = (Context.Request.Path.Value ?? "/").ToLower();
     var onOrders = path == "/" || path.StartsWith("/home");
     var onNew = path.StartsWith("/order/create");
+    var onIncome = path.StartsWith("/reports");
+    var onMenu = path.StartsWith("/menu");
     var onStaff = path.StartsWith("/account/staff");
     var signedIn = User.Identity?.IsAuthenticated == true;
     var isAdmin = User.IsInRole("Admin");
@@ -22,7 +24,7 @@
     <nav class="navbar navbar-expand-lg sne-navbar">
         <div class="container">
             <a class="navbar-brand" asp-controller="Home" asp-action="Index">
-                <i class="bi bi-hearts"></i> SNÉ CAFE
+                <i class="bi bi-cup-hot-fill"></i> SNE CAFE
             </a>
 
             @if (signedIn)
@@ -40,6 +42,16 @@
                     </li>
                     @if (isAdmin)
                     {
+                        <li class="nav-item">
+                            <a class="nav-link @(onIncome ? "active" : "")" asp-controller="Reports" asp-action="Index">
+                                <i class="bi bi-graph-up-arrow"></i> Income
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(onMenu ? "active" : "")" asp-controller="Menu" asp-action="Index">
+                                <i class="bi bi-card-list"></i> Menu
+                            </a>
+                        </li>
                         <li class="nav-item">
                             <a class="nav-link @(onStaff ? "active" : "")" asp-controller="Account" asp-action="Staff">
                                 <i class="bi bi-people"></i> Staff

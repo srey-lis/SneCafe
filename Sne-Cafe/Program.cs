@@ -1,6 +1,13 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Sne_Cafe.Data;
 using SneCafe.Data;
+using SneCafe.Services;
+using System.Globalization;
+
+// Prices always use a dot: 3.80
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +18,9 @@ builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddScoped<OrderListRepository>();
 builder.Services.AddScoped<ReceiptRepository>();
 builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<MenuRepository>();
+builder.Services.AddScoped<ReportRepository>();
+builder.Services.AddScoped<ImageStorage>();
 
 // Login with a cookie
 builder.Services
@@ -44,8 +54,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-app.UseAuthentication();   // who are you?   (must come before UseAuthorization)
-app.UseAuthorization();    // are you allowed?
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",

@@ -1,0 +1,275 @@
+﻿@using SneCafe.Models
+@model ReportViewModel
+@{
+    ViewData["Title"] = "Income";
+    var todayText = DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+<!-- Header -->
+<div class="mb-4">
+    <h1 class="h3 fw-bold mb-1">Income</h1>
+    <p class="text-muted mb-0">Money taken from orders that were not cancelled.</p>
+</div>
+
+<!-- Today / Week / Month -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon"><i class="bi bi-sun"></i></div>
+                <div>
+                    <div class="text-muted small">Today</div>
+                    <div class="fs-3 fw-semibold">$@Model.TodayIncome.ToString("0.00")</div>
+                    <div class="text-muted small">@Model.TodayOrders orders</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon"><i class="bi bi-calendar-week"></i></div>
+                <div>
+                    <div class="text-muted small">This week (from Monday)</div>
+                    <div class="fs-3 fw-semibold">$@Model.WeekIncome.ToString("0.00")</div>
+                    <div class="text-muted small">@Model.WeekOrders orders</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon"><i class="bi bi-calendar-month"></i></div>
+                <div>
+                    <div class="text-muted small">This month</div>
+                    <div class="fs-3 fw-semibold">$@Model.MonthIncome.ToString("0.00")</div>
+                    <div class="text-muted small">@Model.MonthOrders orders</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Period picker -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-action="Index" asp-route-preset="7"
+               class="pill text-decoration-none @(Model.Preset == "7" ? "active" : "")">Last 7 days</a>
+            <a asp-action="Index" asp-route-preset="30"
+               class="pill text-decoration-none @(Model.Preset == "30" ? "active" : "")">Last 30 days</a>
+            <a asp-action="Index" asp-route-preset="month"
+               class="pill text-decoration-none @(Model.Preset == "month" ? "active" : "")">This month</a>
+        </div>
+
+        <form method="get" asp-action="Index" class="d-flex flex-wrap align-items-center gap-2">
+            <input type="date" name="from" class="form-control form-control-sm" style="width: auto"
+                   value="@Model.From.ToString("yyyy-MM-dd")" max="@todayText" required />
+            <span class="text-muted small">to</span>
+            <input type="date" name="to" class="form-control form-control-sm" style="width: auto"
+                   value="@Model.To.ToString("yyyy-MM-dd")" max="@todayText" required />
+            <button type="submit" class="btn btn-sne py-1 px-3">Apply</button>
+        </form>
+    </div>
+</div>
+
+<!-- Selected period summary -->
+<div class="row g-3 mb-4 text-center">
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Income</div>
+                <div class="fs-4 fw-semibold" style="color: var(--sne-green)">$@Model.RangeIncome.ToString("0.00")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Orders</div>
+                <div class="fs-4 fw-semibold">@Model.RangeOrders</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Average order</div>
+                <div class="fs-4 fw-semibold">$@Model.AverageOrder.ToString("0.00")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small">Cancelled</div>
+                <div class="fs-4 fw-semibold">@Model.RangeCancelled</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="text-muted small mb-2">
+    Showing @Model.From.ToString("dd MMM yyyy") to @Model.To.ToString("dd MMM yyyy")
+</div>
+
+<div class="row g-4">
+
+    <!-- Chart -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="fw-semibold mb-3"><i class="bi bi-graph-up-arrow me-1"></i> Income per day</h5>
+
+                @if (Model.RangeOrders == 0)
+                {
+                    <div class="text-center text-muted py-5">
+                        <div class="display-6"><i class="bi bi-bar-chart"></i></div>
+                        <div class="mt-2">No sales in this period.</div>
+                    </div>
+                }
+                else
+                {
+                    <div style="position: relative; height: 320px">
+                        <canvas id="incomeChart"></canvas>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment split + best sellers -->
+    <div class="col-lg-4">
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="fw-semibold mb-3"><i class="bi bi-wallet2 me-1"></i> Cash vs Card</h5>
+
+                @if (Model.Payments.Count == 0)
+                {
+                    <div class="text-muted small">No payments yet.</div>
+                }
+                @foreach (var p in Model.Payments)
+                {
+                    int share = Model.RangeIncome > 0 ? (int)Math.Round(100 * p.Income / Model.RangeIncome) : 0;
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small">
+                            <span>
+                                <i class="bi @(p.Method == "Card" ? "bi-credit-card" : "bi-cash-coin")"></i> @p.Method
+                                <span class="text-muted">(@p.Orders)</span>
+                            </span>
+                            <span class="fw-semibold">$@p.Income.ToString("0.00") · @(share)%</span>
+                        </div>
+                        <div class="progress" style="height: 6px">
+                            <div class="progress-bar" style="width: @(share)%; background: var(--sne-green)"></div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="fw-semibold mb-3"><i class="bi bi-trophy me-1"></i> Best sellers</h5>
+
+                @if (Model.TopItems.Count == 0)
+                {
+                    <div class="text-muted small">No items sold in this period.</div>
+                }
+                else
+                {
+                    int max = Model.TopItems.Max(t => t.Qty);
+                    @for (int i = 0; i < Model.TopItems.Count; i++)
+                    {
+                        var t = Model.TopItems[i];
+                        int pct = (int)Math.Round(100.0 * t.Qty / max);
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between small">
+                                <span><span class="text-muted">@(i + 1).</span> @t.Name</span>
+                                <span class="fw-semibold">@t.Qty sold · $@t.Revenue.ToString("0.00")</span>
+                            </div>
+                            <div class="progress" style="height: 6px">
+                                <div class="progress-bar" style="width: @(pct)%; background: var(--sne-green)"></div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Day by day table -->
+@if (Model.RangeOrders > 0)
+{
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="fw-semibold mb-0"><i class="bi bi-table me-1"></i> Day by day</h5>
+        </div>
+        <div class="table-responsive" style="max-height: 360px; overflow-y: auto">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="text-uppercase small text-muted">
+                        <th class="ps-4">Date</th>
+                        <th>Orders</th>
+                        <th class="text-end pe-4">Income</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in Model.Days.Where(x => x.Orders > 0).OrderByDescending(x => x.Date))
+                    {
+                        <tr>
+                            <td class="ps-4">@d.Date.ToString("ddd, dd MMM yyyy")</td>
+                            <td>@d.Orders</td>
+                            <td class="text-end pe-4 fw-semibold">$@d.Income.ToString("0.00")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @if (Model.RangeOrders > 0)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+        <script>
+            const labels  = @Html.Raw(Json.Serialize(Model.Days.Select(d => d.Label)));
+            const incomes = @Html.Raw(Json.Serialize(Model.Days.Select(d => d.Income)));
+            const orders  = @Html.Raw(Json.Serialize(Model.Days.Select(d => d.Orders)));
+
+            new Chart(document.getElementById("incomeChart"), {
+                type: "bar",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "Income",
+                        data: incomes,
+                        backgroundColor: "#3EA597",
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => "$" + ctx.parsed.y.toFixed(2) + "  (" + orders[ctx.dataIndex] + " orders)"
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: v => "$" + v }
+                        }
+                    }
+                }
+            });
+        </script>
+    }
+}
